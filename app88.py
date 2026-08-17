@@ -7,8 +7,15 @@ import pickle
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
+import urllib.request
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
+
+# ---------------------------------------------------------
+# Direct Release Links for Large Data Files
+# ---------------------------------------------------------
+PKL_URL = "https://github.com/rajbirkaurinfo97-png/Project---8/releases/download/v1.0/processed_jobs.pkl"
+NPY_URL = "https://github.com/rajbirkaurinfo97-png/Project---8/releases/download/v1.0/job_embeddings.npy"
 
 # ---------------------------------------------------------
 # Page Configuration & Styling
@@ -21,10 +28,9 @@ st.title("💼 Job Market Analysis & NLP Recommendation System")
 # ---------------------------------------------------------
 @st.cache_resource
 def load_artifacts():
-    # Local path on your computer
+    # Local path check for desktop environment
     local_dir = r"C:\Users\HUT2099\Desktop\internship documents\8th project 17 august 2026\docker_deployment_package"
     
-    # Check if local directory exists; otherwise default to script folder (for Streamlit Cloud)
     if os.path.exists(local_dir):
         BASE_DIR = local_dir
     else:
@@ -33,19 +39,29 @@ def load_artifacts():
     pkl_path = os.path.join(BASE_DIR, "processed_jobs.pkl")
     npy_path = os.path.join(BASE_DIR, "job_embeddings.npy")
 
+    # Download from GitHub Release if missing (for Streamlit Cloud deployment)
+    if not os.path.exists(pkl_path):
+        with st.spinner("Downloading job database..."):
+            urllib.request.urlretrieve(PKL_URL, pkl_path)
+
+    if not os.path.exists(npy_path):
+        with st.spinner("Downloading matrix embeddings..."):
+            urllib.request.urlretrieve(NPY_URL, npy_path)
+
     df = pd.read_pickle(pkl_path)
     embeddings = np.load(npy_path)
     transformer_model = SentenceTransformer('all-MiniLM-L6-v2')
     return df, embeddings, transformer_model
 
 df, job_embeddings, transformer = load_artifacts()
+
 # ---------------------------------------------------------
 # Main Navigation Tabs
 # ---------------------------------------------------------
 tab1, tab2 = st.tabs(["🔍 Recommendation Engine", "📊 Market Analytics Dashboard"])
 
 # =========================================================
-# TAB 1: RECOMMENDATION ENGINE (Task 5)
+# TAB 1: RECOMMENDATION ENGINE
 # =========================================================
 with tab1:
     st.header("Find Relevant Jobs with Transformer Embeddings")
@@ -61,7 +77,7 @@ with tab1:
     min_hourly = st.sidebar.number_input("Minimum Hourly Rate ($/hr):", min_value=0, value=20, step=5)
     
     # Extract unique countries for multi-select dropdown
-    available_countries = sorted([str(c) for c in df['country'].dropna().unique() if c != ''])
+    available_countries = sorted([str(c) for c in df['country'].dropna().unique() if str(c).strip() != ''])
     selected_countries = st.sidebar.multiselect("Country Filter:", available_countries)
     
     top_n = st.sidebar.slider("Number of Recommendations:", 5, 20, 10)
@@ -107,7 +123,7 @@ with tab2:
         st.subheader("Postings by Category")
         if 'category' in df.columns:
             fig, ax = plt.subplots(figsize=(8, 4))
-            df['category'].value_counts().plot(kind='bar', ax=ax, color='skyblue')
+            df['category'].value_counts().head(10).plot(kind='bar', ax=ax, color='skyblue')
             ax.set_ylabel("Count")
             st.pyplot(fig)
             
