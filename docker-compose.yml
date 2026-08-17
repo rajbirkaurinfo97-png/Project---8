@@ -1,0 +1,15 @@
+# Purpose: Docker Compose configuration for single-command container deployment
+
+version: '3.8'
+
+services:
+  job-recommendation-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: streamlit_job_recommender
+    ports:
+      - "8501:8501"
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
